@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 
+#include <string_view>
+
+#include <ranges>
+
 using namespace std;
 
 void part1() {
@@ -41,7 +45,7 @@ void part2() {
             } else {
                 switch (str[i]) {
                 case 'o':
-                    if (str.substr(i, 3) == "one"s) {
+                    if (string_view{&str[i], 3} == "one"sv) {
                         v.push_back(1);
                         i += 2;
                     } else {
@@ -49,10 +53,10 @@ void part2() {
                     }
                     break;
                 case 't':
-                    if (str.substr(i, 3) == "two"s) {
+                    if (string_view{&str[i], 3} == "two"sv) {
                         v.push_back(2);
                         i += 2;
-                    } else if (str.substr(i, 5) == "three"s) {
+                    } else if (string_view{&str[i], 5} == "three"sv) {
                         v.push_back(3);
                         i += 4;
                     } else {
@@ -60,10 +64,10 @@ void part2() {
                     }
                     break;
                 case 'f':
-                    if (str.substr(i, 4) == "four"s) {
+                    if (string_view{&str[i], 4} == "four"sv) {
                         v.push_back(4);
                         i += 4;
-                    } else if (str.substr(i, 4) == "five"s) {
+                    } else if (string_view{&str[i], 4} == "five"sv) {
                         v.push_back(5);
                         i += 3;
                     } else {
@@ -71,10 +75,10 @@ void part2() {
                     }
                     break;
                 case 's':
-                    if (str.substr(i, 3) == "six"s) {
+                    if (string_view{&str[i], 3} == "six"sv) {
                         v.push_back(6);
                         i += 3;
-                    } else if (str.substr(i, 5) == "seven"s) {
+                    } else if (string_view{&str[i], 5} == "seven"sv) {
                         v.push_back(7);
                         i += 4;
                     } else {
@@ -83,7 +87,7 @@ void part2() {
 
                     break;
                 case 'e':
-                    if (str.substr(i, 5) == "eight"s) {
+                    if (string_view{&str[i], 5} == "eight"sv) {
                         v.push_back(8);
                         i += 4;
                     } else {
@@ -91,7 +95,7 @@ void part2() {
                     }
                     break;
                 case 'n':
-                    if (str.substr(i, 4) == "nine"s) {
+                    if (string_view{&str[i], 4} == "nine"sv) {
                         v.push_back(9);
                         i += 3;
                     } else {
