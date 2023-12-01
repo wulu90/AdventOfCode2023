@@ -1,0 +1,77 @@
+{
+    "version": 5,
+    "configurePresets": [
+        {
+            "name": "config_base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_CXX_STANDARD": "23"
+            }
+        },
+        {
+            "name": "windows_base",
+            "hidden": true,
+            "inherits": "config_base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "cl"
+            }
+        },
+        {
+            "name": "linux_base",
+            "inherits": "config_base",
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "windows_debug",
+            "inherits": "windows_base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "windows_release",
+            "inherits": "windows_base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_FLAGS": "-Wall -W -Werror"
+            }
+        },
+        {
+            "name": "linux_debug",
+            "inherits": "linux_base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS": "-Wall -W -Werror"
+            }
+        },
+        {
+            "name": "linux_release",
+            "inherits": "linux_base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_FLAGS": "-Wall -W -Werror"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "windows_debug",
+            "configurePreset": "windows_debug"
+        }
+    ]
+}
