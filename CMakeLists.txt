@@ -4,3 +4,4 @@ project("aoc2023")
 
 add_executable(day1 1.cpp)
 add_executable(day2 2.cpp)
+add_executable(day3 3.cpp)
