@@ -19,6 +19,14 @@
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "toolset": {
+                "value": "host=x64",
+                "strategy": "external"
+            },
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER": "cl"
             }
@@ -47,8 +55,7 @@
             "name": "windows_release",
             "inherits": "windows_base",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_FLAGS": "-Wall -W -Werror"
+                "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
@@ -63,8 +70,7 @@
             "name": "linux_release",
             "inherits": "linux_base",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_FLAGS": "-Wall -W -Werror"
+                "CMAKE_BUILD_TYPE": "Release"
             }
         }
     ],
@@ -72,6 +78,10 @@
         {
             "name": "windows_debug",
             "configurePreset": "windows_debug"
+        },
+        {
+            "name": "windows_release",
+            "configurePreset": "windows_release"
         }
     ]
 }
