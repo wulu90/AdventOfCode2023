@@ -24,10 +24,8 @@ struct history {
         if (!all_of(values.begin() + start, values.end(), [](auto n) { return n == 0; })) {
             auto tmp = values.size();
             vector<int64_t> tv;
-            adjacent_difference(values.begin() + start, values.end(), back_inserter(tv));    // why back_inserter(values) ?
-            for (int i = 1; i < tv.size(); ++i) {
-                values.push_back(tv[i]);
-            }
+            adjacent_difference(values.begin() + start, values.end(), back_inserter(tv));
+            copy(tv.begin() + 1, tv.end(), back_inserter(values));
             process(tmp);
         }
     }
