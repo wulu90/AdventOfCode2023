@@ -5,9 +5,6 @@
 #include <vector>
 using namespace std;
 
-enum class pipe { h, v };
-enum class bend { ne, nw, sw, se };
-
 pair<int, int> getnext(const vector<string>& surf, int i, int j, int p_i, int p_j) {
     switch (surf[i][j]) {
     case '|':
@@ -42,6 +39,30 @@ tuple<int, int, int, int> getstartdirs(char s, int i, int j) {
     }
 }
 
+char findstarttype(const vector<string>& surf, int i, int j) {
+    char up    = i == 0 ? '.' : surf[i - 1][j];
+    char left  = j == 0 ? '.' : surf[i][j - 1];
+    char down  = i == surf.size() - 1 ? '.' : surf[i + 1][j];
+    char right = j == surf[0].size() - 1 ? '.' : surf[i][j + 1];
+
+    if ((up == '|' || up == '7' || up == 'F') && (down == '|' || down == 'L' || down == 'J')) {
+        return '|';
+    }
+    if ((left == '-' || left == 'L' || left == 'F') && (right == '-' || right == 'J' || right == '7')) {
+        return '-';
+    }
+    if ((up == '|' || up == '7' || up == 'F') && (right == '-' || right == 'J' || right == '7')) {
+        return 'L';
+    }
+    if ((up == '|' || up == '7' || up == 'F') && (left == '-' || left == 'L' || left == 'F')) {
+        return 'J';
+    }
+    if ((left == '-' || left == 'L' || left == 'F') && (down == '|' || down == 'L' || down == 'J')) {
+        return '7';
+    }
+    return 'F';
+}
+
 void part1() {
     ifstream input("input");
     vector<string> surface;
@@ -58,9 +79,7 @@ void part1() {
         ++i;
     }
 
-    // find S bend or pipe type
-    // todo
-    char stype = '|';    // just see input
+    char stype = findstarttype(surface, i, j);
 
     auto startdirs = getstartdirs(stype, i, j);
     pair<int, int> curr_1{get<0>(startdirs), get<1>(startdirs)};
@@ -100,9 +119,7 @@ void part2() {
         ++i;
     }
 
-    // find S bend or pipe type
-    // todo
-    char stype = '|';    // just see input
+    char stype = findstarttype(surface, i, j);
 
     auto startdirs = getstartdirs(stype, i, j);
     pair<int, int> curr_1{get<0>(startdirs), get<1>(startdirs)};
@@ -148,6 +165,7 @@ void part2() {
 }
 
 int main() {
+    // key point: there is only one loop!
     part1();
     part2();
     return 0;
