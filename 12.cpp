@@ -110,23 +110,10 @@ void part1() {
     cout << sum << endl;
 }
 
-struct pattern {
-    // string str;
-    int matched_groups;
-    int curr_damaged;
-};
-
-bool operator<(const pattern& lhs, const pattern& rhs) {
-    if (lhs.matched_groups == rhs.matched_groups) {
-        return lhs.curr_damaged < rhs.curr_damaged;
-    }
-    return lhs.matched_groups < rhs.matched_groups;
-}
-
-bool check(const char& c, const vector<int>& v, pattern& p) {
-    if (p.matched_groups == v.size()) {
+bool check_nextchar(char c, const vector<int>& v, pair<int, int>& p) {
+    auto& [matched_group, curr_damaged] = p;
+    if (matched_group == v.size()) {
         if (c == '.') {
-            // p.str += c;
             return true;
         } else {
             return false;
@@ -134,116 +121,65 @@ bool check(const char& c, const vector<int>& v, pattern& p) {
     }
 
     bool res = true;
+
     if (c == '#') {
-        if (p.curr_damaged + 1 > v[p.matched_groups]) {
+        if (curr_damaged + 1 > v[matched_group]) {
             res = false;
         } else {
-            // p.str += c;
-            ++p.curr_damaged;
+            ++curr_damaged;
         }
     } else {
-        if (p.curr_damaged > 0) {
-            if (p.curr_damaged < v[p.matched_groups]) {
+        if (curr_damaged > 0) {
+            if (curr_damaged < v[matched_group]) {
                 res = false;
             } else {
-                // p.str += c;
-                p.curr_damaged = 0;
-                ++p.matched_groups;
+                curr_damaged = 0;
+                ++matched_group;
             }
-        } else {
-            // p.str += c;
         }
     }
     return res;
 }
 
-int64_t arrangements(const string& str, const vector<int>& v) {
-    // queue<pattern> qs;
-    // qs.push({});
+bool check_pattern(int inx, int strlen, const vector<int>& v, const pair<int, int>& p) {
+    bool res = false;
+    if (inx < strlen - 1) {
+        res = true;
+    } else {
+        auto [matched_group, curr_damaged] = p;
+        if (matched_group == v.size() || (matched_group == v.size() - 1 && curr_damaged == *v.rbegin())) {
+            res = true;
+        }
+    }
+    return res;
+}
 
-    // for (int i = 0; i < str.size(); ++i) {
-    //     size_t num = qs.size();
-    //     for (int j = 0; j < num; ++j) {
-    //         auto p = qs.front();
-
-    //         if (str[i] != '?') {
-    //             auto tmp = p;
-    //             if (check(str[i], v, tmp) &&
-    //                 (i < str.size() - 1 ||
-    //                  (i == str.size() - 1 &&
-    //                   (tmp.matched_groups == v.size() || (tmp.matched_groups == v.size() - 1 && tmp.curr_damaged == *v.rbegin()))))) {
-    //                 qs.push(tmp);
-    //             }
-    //         } else {
-    //             auto t1 = p;
-    //             auto t2 = p;
-    //             if (check('.', v, t1) &&
-    //                 (i < str.size() - 1 || (i == str.size() - 1 && (t1.matched_groups == v.size() || (t1.matched_groups == v.size() - 1
-    //                 &&
-    //                                                                                                   t1.curr_damaged == *v.rbegin())))))
-    //                                                                                                   {
-    //                 qs.push(t1);
-    //             }
-    //             if (check('#', v, t2) &&
-    //                 (i < str.size() - 1 || (i == str.size() - 1 && (t2.matched_groups == v.size() || (t2.matched_groups == v.size() - 1
-    //                 &&
-    //                                                                                                   t2.curr_damaged == *v.rbegin())))))
-    //                                                                                                   {
-    //                 qs.push(t2);
-    //             }
-    //         }
-    //         qs.pop();
-    //     }
-    // }
-
-    map<pattern, int64_t> pattern_size;
+int64_t arr(const string& str, const vector<int>& v) {
+    map<pair<int, int>, int64_t> pattern_size;    // matched_group,curr_damaged,count;
     pattern_size.insert({{}, 1});
 
     for (int i = 0; i < str.size(); ++i) {
-        // size_t num=ps.size();
-        map<pattern, int64_t> tmp_ps;
+        map<pair<int, int>, int64_t> tmp_ps;
 
         for (auto [p, s] : pattern_size) {
+            vector<char> cv;
             if (str[i] != '?') {
-                auto tmp = p;
-                if (check(str[i], v, tmp)) {
-                    if (i < str.size() - 1) {
-                        tmp_ps[tmp] += s;
-                    }
-                    if (i == str.size() - 1) {
-                        if (tmp.matched_groups == v.size() || (tmp.matched_groups == v.size() - 1 && tmp.curr_damaged == *v.rbegin())) {
-                            tmp_ps[tmp] += s;
-                        }
-                    }
-                }
+                cv.push_back(str[i]);
             } else {
-                auto t1 = p;
-                auto t2 = p;
-                if (check('.', v, t1)) {
-                    if (i < str.size() - 1) {
-                        tmp_ps[t1] += s;
-                    }
-                    if (i == str.size() - 1) {
-                        if (t1.matched_groups == v.size() || (t1.matched_groups == v.size() - 1 && t1.curr_damaged == *v.rbegin())) {
-                            tmp_ps[t1] += s;
-                        }
-                    }
-                }
-                if (check('#', v, t2)) {
-                    if (i < str.size() - 1) {
-                        tmp_ps[t2] += s;
-                    }
-                    if (i == str.size() - 1) {
-                        if (t2.matched_groups == v.size() || (t2.matched_groups == v.size() - 1 && t2.curr_damaged == *v.rbegin())) {
-                            tmp_ps[t2] += s;
-                        }
-                    }
+                cv.push_back('.');
+                cv.push_back('#');
+            }
+
+            for (auto c : cv) {
+                auto tmp = p;
+
+                if (check_nextchar(c, v, tmp) && check_pattern(i, str.size(), v, tmp)) {
+                    tmp_ps[tmp] += s;
                 }
             }
         }
         pattern_size = tmp_ps;
     }
-
     int64_t sum = 0;
     for (auto [p, s] : pattern_size) {
         sum += s;
@@ -260,11 +196,8 @@ void part2() {
     }
 
     int64_t sum = 0;
-    int i       = 1;
     for (auto row : rows) {
-        sum += arrangements(row.condition, row.damagedgroup);
-        cout << i << "/" << rows.size() << " " << sum << endl;
-        ++i;
+        sum += arr(row.condition, row.damagedgroup);
     }
 
     cout << sum << endl;
