@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <set>
 #include <string>
 #include <vector>
@@ -11,7 +12,7 @@ void dfs(const vector<string>& layout, size_t row, size_t col, direction dire, v
     size_t rowsize = layout.size();
     size_t colsize = layout[0].size();
 
-    if (row < 0 || row >= rowsize || col < 0 || col >= colsize) {
+    if (row == numeric_limits<size_t>::max() || row >= rowsize || col == numeric_limits<size_t>::max() || col >= colsize) {
         return;
     }
 
@@ -90,7 +91,45 @@ void part1() {
     cout << energized_count << endl;
 }
 
+size_t count_energized(const vector<string>& layout, size_t row, size_t col, direction dire) {
+    vector<vector<set<direction>>> grid_dirs(layout.size(), vector<set<direction>>(layout[0].size()));
+
+    dfs(layout, row, col, dire, grid_dirs);
+
+    size_t energized_count = 0;
+    for (auto& sv : grid_dirs) {
+        for (auto& s : sv) {
+            if (!s.empty()) {
+                ++energized_count;
+            }
+        }
+    }
+    return energized_count;
+}
+
+void part2() {
+    ifstream input("input");
+    vector<string> layout;
+    for (string str; getline(input, str);) {
+        layout.push_back(str);
+    }
+
+    size_t max_energized = 0;
+    for (size_t i = 0; i < layout.size(); ++i) {
+        max_energized = max(max_energized, count_energized(layout, i, 0, direction::right));
+        max_energized = max(max_energized, count_energized(layout, i, layout[0].size() - 1, direction::left));
+    }
+
+    for (size_t i = 0; i < layout[0].size(); ++i) {
+        max_energized = max(max_energized, count_energized(layout, 0, i, direction::down));
+        max_energized = max(max_energized, count_energized(layout, layout.size() - 1, i, direction::up));
+    }
+
+    cout << max_energized << endl;
+}
+
 int main() {
     part1();
+    part2();
     return 0;
 }
