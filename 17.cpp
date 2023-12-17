@@ -158,8 +158,119 @@ void part2() {
     cout << minv << endl;
 }
 
+void part1_pq() {
+    ifstream input("input");
+    vector<uint8_t> blocks;
+    size_t colnum = 0;
+    for (string str; getline(input, str);) {
+        colnum = str.size();
+        for (auto& c : str) {
+            blocks.push_back(c - '0');
+        }
+    }
+
+    auto rownum = blocks.size() / colnum;
+
+    auto inf = numeric_limits<uint64_t>::max();
+
+    vector<uint64_t> lose(rownum * colnum, inf);
+    vector<bool> visited(rownum * colnum, false);
+    vector<pair<direction, size_t>> dir_step(rownum * colnum);
+
+    lose[0]     = 0;
+    size_t curr = 0;
+
+    vector<map<pair<direction, size_t>, size_t>> dsl(blocks.size());    // direction,steps,lose;
+
+    dsl[1]      = {{{direction::right, 1}, blocks[1]}};
+    dsl[colnum] = {{{direction::down, 1}, blocks[colnum]}};
+
+    auto lfunc = [](const node& lhs, const node& rhs) -> bool {
+        return tie(lhs.lose, lhs.inx, lhs.dire, lhs.step) > tie(rhs.lose, rhs.inx, rhs.dire, rhs.step);
+    };
+
+    priority_queue<node, vector<node>, decltype(lfunc)> nq;
+    nq.push({1, direction::right, 1, blocks[1]});
+    nq.push({colnum, direction::down, 1, blocks[colnum]});
+
+    while (!nq.empty()) {
+        auto& curr = nq.top();
+
+        if (curr.inx == blocks.size() - 1) {
+            cout << curr.lose << endl;
+            break;
+        }
+
+        for (auto& n : next_pos(curr, blocks, rownum, colnum, 1, 3)) {
+            if (!dsl[n.inx].contains({n.dire, n.step}) ||
+                (dsl[n.inx].contains({n.dire, n.step}) && dsl[n.inx][{n.dire, n.step}] > n.lose)) {
+                nq.push(n);
+                dsl[n.inx][{n.dire, n.step}] = n.lose;
+            }
+        }
+
+        nq.pop();
+    }
+}
+
+void part2_pq() {
+    ifstream input("input");
+    vector<uint8_t> blocks;
+    size_t colnum = 0;
+    for (string str; getline(input, str);) {
+        colnum = str.size();
+        for (auto& c : str) {
+            blocks.push_back(c - '0');
+        }
+    }
+
+    auto rownum = blocks.size() / colnum;
+
+    auto inf = numeric_limits<uint64_t>::max();
+
+    vector<uint64_t> lose(rownum * colnum, inf);
+    vector<bool> visited(rownum * colnum, false);
+    vector<pair<direction, size_t>> dir_step(rownum * colnum);
+
+    lose[0]     = 0;
+    size_t curr = 0;
+
+    vector<map<pair<direction, size_t>, size_t>> dsl(blocks.size());    // direction,steps,lose;
+
+    dsl[1]      = {{{direction::right, 1}, blocks[1]}};
+    dsl[colnum] = {{{direction::down, 1}, blocks[colnum]}};
+
+    auto lfunc = [](const node& lhs, const node& rhs) -> bool {
+        return tie(lhs.lose, lhs.inx, lhs.dire, lhs.step) > tie(rhs.lose, rhs.inx, rhs.dire, rhs.step);
+    };
+
+    priority_queue<node, vector<node>, decltype(lfunc)> nq;
+    nq.push({1, direction::right, 1, blocks[1]});
+    nq.push({colnum, direction::down, 1, blocks[colnum]});
+
+    while (!nq.empty()) {
+        auto& curr = nq.top();
+
+        if (curr.inx == blocks.size() - 1 && !dsl.rbegin()->empty()) {
+            cout << curr.lose << endl;
+
+            break;
+        }
+
+        for (auto& n : next_pos(curr, blocks, rownum, colnum, 4, 10)) {
+            if (!dsl[n.inx].contains({n.dire, n.step}) ||
+                (dsl[n.inx].contains({n.dire, n.step}) && dsl[n.inx][{n.dire, n.step}] > n.lose)) {
+                nq.push(n);
+                dsl[n.inx][{n.dire, n.step}] = n.lose;
+            }
+        }
+
+        nq.pop();
+    }
+}
+
 int main() {
-    part1();
-    part2();
+    part1_pq();
+    part2_pq();
     return 0;
 }
