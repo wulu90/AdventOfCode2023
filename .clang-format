@@ -1,4 +1,5 @@
 BasedOnStyle: LLVM
+AlwaysBreakTemplateDeclarations: Yes
 AlignConsecutiveAssignments: true
 # AlignConsecutiveBitFields: true
 AlignTrailingComments: true

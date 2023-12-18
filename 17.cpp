@@ -3,220 +3,147 @@
 #include <iostream>
 #include <map>
 #include <queue>
+#include <set>
 #include <string>
 #include <vector>
 using namespace std;
 
 enum class direction { up, left, down, right };
-vector<vector<int64_t>> dirs{{-1, 0}, {0, -1}, {1, 0}, {0, 1}};
+vector<vector<int>> dirsum{{-1, 0}, {0, -1}, {1, 0}, {0, 1}};
 
-struct node {
-    size_t inx;
+struct state {
+    int dist;
+    int inx;
     direction dire;
-    uint8_t step;
-    uint32_t lose;
+    int step;
 };
 
-vector<node> next_pos(const node& curr, const vector<uint8_t>& blocks, size_t rownum, size_t colnum, size_t mini, size_t maxi) {
-    vector<node> res;
-    vector<size_t> turns{(static_cast<size_t>(curr.dire) + 4 - 1) % 4, (static_cast<size_t>(curr.dire) + 4 + 1) % 4};
-    auto row = curr.inx / rownum;
-    auto col = curr.inx % rownum;
+struct vertex {
+    int inx;
+    direction dire;
+    int step;
+};
 
-    if (curr.step >= mini) {
-        for (auto& ti : turns) {
-            auto r = row + dirs[ti][0];
-            auto c = col + dirs[ti][1];
-            if (r < rownum && c < colnum) {
-                res.emplace_back(r * rownum + c, static_cast<direction>(ti), 1, curr.lose + blocks[r * rownum + c]);
+auto operator<=>(const vertex& lhs, const vertex& rhs) {
+    return tie(lhs.inx, lhs.dire, lhs.step) <=> tie(rhs.inx, rhs.dire, rhs.step);
+}
+
+direction turnleft(const direction& d) {
+    direction res;
+    using enum direction;
+    switch (d) {
+    case up:
+        res = left;
+        break;
+    case left:
+        res = down;
+        break;
+    case down:
+        res = right;
+        break;
+    case right:
+        res = up;
+        break;
+    }
+    return res;
+}
+
+direction turnright(const direction& d) {
+    using enum direction;
+    switch (d) {
+    case up:
+        return right;
+    case right:
+        return down;
+    case down:
+        return left;
+    default:
+        return up;
+    }
+}
+
+vector<pair<int, vertex>> nextstate(const vector<int>& blocks, const vertex& v, int rownum, int colnum, int mini, int maxi) {
+    auto row = v.inx / rownum;
+    auto col = v.inx % rownum;
+    vector<pair<int, vertex>> res;
+    if (v.step >= mini) {
+        vector<direction> lr{turnleft(v.dire), turnright(v.dire)};
+        for (auto d : lr) {
+            auto r = row + dirsum[static_cast<size_t>(d)][0];
+            auto c = col + dirsum[static_cast<size_t>(d)][1];
+            if (r >= 0 && r < rownum && c >= 0 && c < colnum) {
+                res.emplace_back(blocks[r * rownum + c], vertex{r * rownum + c, d, 1});
             }
         }
     }
-    if (curr.step < maxi) {
-        auto r = row + dirs[static_cast<size_t>(curr.dire)][0];
-        auto c = col + dirs[static_cast<size_t>(curr.dire)][1];
-        if (r < rownum && c < colnum) {
-            res.emplace_back(r * rownum + c, curr.dire, curr.step + 1, curr.lose + blocks[r * rownum + c]);
+    if (v.step < maxi) {
+        auto cost = 0;
+        for (int i = 1; i <= maxi - v.step; ++i) {
+            auto r = row + dirsum[static_cast<size_t>(v.dire)][0] * i;
+            auto c = col + dirsum[static_cast<size_t>(v.dire)][1] * i;
+
+            if (r >= 0 && r < rownum && c >= 0 && c < colnum) {
+                cost += blocks[r * rownum + c];
+                res.emplace_back(cost, vertex{r * rownum + c, v.dire, v.step + i});
+            }
+        }
+    }
+
+    return res;
+}
+
+map<vertex, int> all_vertex(const vector<int>& blocks, int rownum, int colnum, int mini, int maxi) {
+    map<vertex, int> res;
+    for (size_t i = 0; i < rownum; ++i) {
+        for (size_t j = 0; j < colnum; ++j) {
+            for (int k = 0; k < 4; ++k) {
+                for (int s = 1; s <= maxi; ++s) {
+                    int r = i + dirsum[k][0] * s;
+                    int c = j + dirsum[k][1] * s;
+                    if (r >= 0 && r < rownum && c >= 0 && c < colnum) {
+                        res.insert({vertex{r * rownum + c, direction{k}, s}, numeric_limits<int>::max()});
+                    }
+                }
+            }
         }
     }
     return res;
 }
 
-void part1() {
-    ifstream input("input");
-    vector<uint8_t> blocks;
-    size_t colnum = 0;
-    for (string str; getline(input, str);) {
-        colnum = str.size();
-        for (auto& c : str) {
-            blocks.push_back(c - '0');
-        }
-    }
+int dijkstra_priority_queue(const vector<int>& blocks, const vertex& startv, int startcost, int rownum, int colnum, int mini, int maxi) {
+    priority_queue<pair<int, vertex>, vector<pair<int, vertex>>, greater<pair<int, vertex>>> pq;
+    set<vertex> seen;
 
-    auto rownum = blocks.size() / colnum;
+    map<vertex, int> distance = all_vertex(blocks, rownum, colnum, mini, maxi);
+    distance[startv]          = startcost;
 
-    auto inf = numeric_limits<uint64_t>::max();
+    vertex curr{startv};
 
-    vector<uint64_t> lose(rownum * colnum, inf);
-    vector<bool> visited(rownum * colnum, false);
-    vector<pair<direction, size_t>> dir_step(rownum * colnum);
-
-    lose[0]     = 0;
-    size_t curr = 0;
-
-    vector<map<pair<direction, size_t>, size_t>> dsl(blocks.size());    // direction,steps,lose;
-
-    dsl[1]      = {{{direction::right, 1}, blocks[1]}};
-    dsl[colnum] = {{{direction::down, 1}, blocks[colnum]}};
-
-    queue<node> nq;
-    nq.push({1, direction::right, 1, blocks[1]});
-    nq.push({colnum, direction::down, 1, blocks[colnum]});
-
-    uint32_t minv = numeric_limits<uint32_t>::max();
-
-    while (!nq.empty()) {
-        auto qnum = nq.size();
-        for (size_t i = 0; i < qnum; ++i) {
-            auto& curr = nq.front();
-
-            if (curr.inx == blocks.size() - 1) {
-                minv = min(curr.lose, minv);
-                nq.pop();
-                continue;
+    while (true) {
+        for (auto [nc, nv] : nextstate(blocks, curr, rownum, colnum, mini, maxi)) {
+            if (!seen.contains(nv) && distance[nv] > distance[curr] + nc) {
+                distance[nv] = distance[curr] + nc;
+                pq.emplace(distance[nv], nv);
             }
-
-            for (auto& n : next_pos(curr, blocks, rownum, colnum, 1, 3)) {
-                if (!dsl[n.inx].contains({n.dire, n.step}) ||
-                    (dsl[n.inx].contains({n.dire, n.step}) && dsl[n.inx][{n.dire, n.step}] > n.lose)) {
-                    nq.push(n);
-                    dsl[n.inx][{n.dire, n.step}] = n.lose;
-                }
-            }
-            nq.pop();
         }
-    }
 
-    cout << minv << endl;
-}
+        seen.insert(curr);
 
-void part2() {
-    ifstream input("input");
-    vector<uint8_t> blocks;
-    size_t colnum = 0;
-    for (string str; getline(input, str);) {
-        colnum = str.size();
-        for (auto& c : str) {
-            blocks.push_back(c - '0');
-        }
-    }
-
-    auto rownum = blocks.size() / colnum;
-
-    auto inf = numeric_limits<uint64_t>::max();
-
-    vector<uint64_t> lose(rownum * colnum, inf);
-    vector<bool> visited(rownum * colnum, false);
-    vector<pair<direction, size_t>> dir_step(rownum * colnum);
-
-    lose[0]     = 0;
-    size_t curr = 0;
-
-    vector<map<pair<direction, size_t>, size_t>> dsl(blocks.size());    // direction,steps,lose;
-
-    dsl[1]      = {{{direction::right, 1}, blocks[1]}};
-    dsl[colnum] = {{{direction::down, 1}, blocks[colnum]}};
-
-    queue<node> nq;
-    nq.push({1, direction::right, 1, blocks[1]});
-    nq.push({colnum, direction::down, 1, blocks[colnum]});
-
-    uint32_t minv = numeric_limits<uint32_t>::max();
-
-    while (!nq.empty()) {
-        auto qnum = nq.size();
-        for (size_t i = 0; i < qnum; ++i) {
-            auto& curr = nq.front();
-
-            if (curr.inx == blocks.size() - 1) {
-                minv = min(curr.lose, minv);
-                nq.pop();
-                continue;
-            }
-
-            for (auto& n : next_pos(curr, blocks, rownum, colnum, 4, 10)) {
-                if (!dsl[n.inx].contains({n.dire, n.step}) ||
-                    (dsl[n.inx].contains({n.dire, n.step}) && dsl[n.inx][{n.dire, n.step}] > n.lose)) {
-                    nq.push(n);
-                    dsl[n.inx][{n.dire, n.step}] = n.lose;
-                }
-            }
-            nq.pop();
-        }
-    }
-
-    cout << minv << endl;
-}
-
-void part1_pq() {
-    ifstream input("input");
-    vector<uint8_t> blocks;
-    size_t colnum = 0;
-    for (string str; getline(input, str);) {
-        colnum = str.size();
-        for (auto& c : str) {
-            blocks.push_back(c - '0');
-        }
-    }
-
-    auto rownum = blocks.size() / colnum;
-
-    auto inf = numeric_limits<uint64_t>::max();
-
-    vector<uint64_t> lose(rownum * colnum, inf);
-    vector<bool> visited(rownum * colnum, false);
-    vector<pair<direction, size_t>> dir_step(rownum * colnum);
-
-    lose[0]     = 0;
-    size_t curr = 0;
-
-    vector<map<pair<direction, size_t>, size_t>> dsl(blocks.size());    // direction,steps,lose;
-
-    dsl[1]      = {{{direction::right, 1}, blocks[1]}};
-    dsl[colnum] = {{{direction::down, 1}, blocks[colnum]}};
-
-    auto lfunc = [](const node& lhs, const node& rhs) -> bool {
-        return tie(lhs.lose, lhs.inx, lhs.dire, lhs.step) > tie(rhs.lose, rhs.inx, rhs.dire, rhs.step);
-    };
-
-    priority_queue<node, vector<node>, decltype(lfunc)> nq;
-    nq.push({1, direction::right, 1, blocks[1]});
-    nq.push({colnum, direction::down, 1, blocks[colnum]});
-
-    while (!nq.empty()) {
-        auto& curr = nq.top();
-
-        if (curr.inx == blocks.size() - 1) {
-            cout << curr.lose << endl;
+        if (curr.inx == rownum * colnum - 1) {
             break;
+        } else {
+            curr = pq.top().second;
+            pq.pop();
         }
-
-        for (auto& n : next_pos(curr, blocks, rownum, colnum, 1, 3)) {
-            if (!dsl[n.inx].contains({n.dire, n.step}) ||
-                (dsl[n.inx].contains({n.dire, n.step}) && dsl[n.inx][{n.dire, n.step}] > n.lose)) {
-                nq.push(n);
-                dsl[n.inx][{n.dire, n.step}] = n.lose;
-            }
-        }
-
-        nq.pop();
     }
+
+    return distance[curr];
 }
 
-void part2_pq() {
+void solve() {
     ifstream input("input");
-    vector<uint8_t> blocks;
-    size_t colnum = 0;
+    vector<int> blocks;
+    int colnum = 0;
     for (string str; getline(input, str);) {
         colnum = str.size();
         for (auto& c : str) {
@@ -224,53 +151,20 @@ void part2_pq() {
         }
     }
 
-    auto rownum = blocks.size() / colnum;
+    int rownum = blocks.size() / colnum;
 
-    auto inf = numeric_limits<uint64_t>::max();
+    auto min1 = dijkstra_priority_queue(blocks, vertex{1, direction::right, 1}, blocks[1], rownum, colnum, 1, 3);
+    auto min2 = dijkstra_priority_queue(blocks, vertex{colnum, direction::down, 1}, blocks[colnum], rownum, colnum, 1, 3);
 
-    vector<uint64_t> lose(rownum * colnum, inf);
-    vector<bool> visited(rownum * colnum, false);
-    vector<pair<direction, size_t>> dir_step(rownum * colnum);
+    cout << min(min1, min2) << endl;
 
-    lose[0]     = 0;
-    size_t curr = 0;
+    auto min3 = dijkstra_priority_queue(blocks, vertex{1, direction::right, 1}, blocks[1], rownum, colnum, 4, 10);
+    auto min4 = dijkstra_priority_queue(blocks, vertex{colnum, direction::down, 1}, blocks[colnum], rownum, colnum, 4, 10);
 
-    vector<map<pair<direction, size_t>, size_t>> dsl(blocks.size());    // direction,steps,lose;
-
-    dsl[1]      = {{{direction::right, 1}, blocks[1]}};
-    dsl[colnum] = {{{direction::down, 1}, blocks[colnum]}};
-
-    auto lfunc = [](const node& lhs, const node& rhs) -> bool {
-        return tie(lhs.lose, lhs.inx, lhs.dire, lhs.step) > tie(rhs.lose, rhs.inx, rhs.dire, rhs.step);
-    };
-
-    priority_queue<node, vector<node>, decltype(lfunc)> nq;
-    nq.push({1, direction::right, 1, blocks[1]});
-    nq.push({colnum, direction::down, 1, blocks[colnum]});
-
-    while (!nq.empty()) {
-        auto& curr = nq.top();
-
-        if (curr.inx == blocks.size() - 1 && !dsl.rbegin()->empty()) {
-            cout << curr.lose << endl;
-
-            break;
-        }
-
-        for (auto& n : next_pos(curr, blocks, rownum, colnum, 4, 10)) {
-            if (!dsl[n.inx].contains({n.dire, n.step}) ||
-                (dsl[n.inx].contains({n.dire, n.step}) && dsl[n.inx][{n.dire, n.step}] > n.lose)) {
-                nq.push(n);
-                dsl[n.inx][{n.dire, n.step}] = n.lose;
-            }
-        }
-
-        nq.pop();
-    }
+    cout << min(min3, min4) << endl;
 }
 
 int main() {
-    part1_pq();
-    part2_pq();
+    solve();
     return 0;
 }
