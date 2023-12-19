@@ -30,9 +30,11 @@ struct condit {
     category cate;
     function<bool(int, int)> func;
     int v;
+    char c;
 
     condit() {
         func = [](int lhs, int rhs) -> bool { return true; };
+        c    = 255;
     }
 
     condit(const string_view& sv) {
@@ -40,8 +42,10 @@ struct condit {
 
         if (sv[1] == '>') {
             func = greater<int>();
+            c    = '>';
         } else {
             func = less<int>();
+            c    = '<';
         }
 
         from_chars(sv.data() + 2, sv.data() + sv.size(), v);
@@ -91,9 +95,7 @@ bool process(map<category, int>& prop, map<string, vector<rule>>& workflows) {
     string curr{"in"};
     bool accept = false;
     while (true) {
-        auto rules = workflows[curr];
-
-        for (auto& r : rules) {
+        for (auto& r : workflows[curr]) {
             auto lhs = prop[r.cond.cate];
             if (r.cond.func(lhs, r.cond.v)) {
                 curr = r.next;
@@ -144,7 +146,96 @@ void part1() {
     cout << sum << endl;
 }
 
+void print(map<category, pair<int, int>>& state) {
+    int64_t aa = 1;
+    for (auto [k, v] : state) {
+        switch (k) {
+        case category::x:
+            cout << 'x';
+            break;
+        case category::m:
+            cout << 'm';
+            break;
+        case category::a:
+            cout << 'a';
+            break;
+        default:
+            cout << 's';
+
+            break;
+        }
+        aa *= v.second - v.first + 1;
+        cout << " " << v.first << " " << v.second << endl;
+    }
+
+    cout << aa << endl;
+}
+
+int64_t poss = 0;
+
+void pppp(map<string, vector<rule>>& workflows, string curr, map<category, pair<int, int>> state) {
+    if (curr == "A"s) {
+        int64_t aa = 1;
+        for (auto [k, v] : state) {
+            aa *= v.second - v.first + 1;
+        }
+        poss += aa;
+        return;
+    }
+    if (curr == "R"s) {
+        return;
+    }
+
+    for (auto r : workflows[curr]) {
+        if (r.cond.c == '>') {
+            if (state[r.cond.cate].first < r.cond.v && state[r.cond.cate].second > r.cond.v) {
+                auto tmp               = state;
+                tmp[r.cond.cate].first = r.cond.v + 1;    // pass condition
+                pppp(workflows, r.next, tmp);
+                state[r.cond.cate].second = r.cond.v;
+            } else if (state[r.cond.cate].first > r.cond.v) {
+                pppp(workflows, r.next, state);
+                break;
+            }
+
+        } else if (r.cond.c == '<') {
+            if (state[r.cond.cate].first < r.cond.v && state[r.cond.cate].second > r.cond.v) {
+                auto tmp                = state;
+                tmp[r.cond.cate].second = r.cond.v - 1;    // pass condition
+                pppp(workflows, r.next, tmp);
+                state[r.cond.cate].first = r.cond.v;
+            } else if (state[r.cond.cate].second < r.cond.v) {
+                pppp(workflows, r.next, state);
+                break;
+            }
+
+        } else {
+            pppp(workflows, r.next, state);
+            break;
+        }
+    }
+}
+
+void part2() {
+    ifstream input("input");
+    string str;
+
+    map<string, vector<rule>> workflows;
+    while (getline(input, str) && !str.empty()) {
+        workflows.insert(parse_workflow(str));
+    }
+
+    map<category, pair<int, int>> start{
+        {category::x, {1, 4000}}, {category::m, {1, 4000}}, {category::a, {1, 4000}}, {category::s, {1, 4000}}};
+
+    int64_t sum = 0;
+    pppp(workflows, "in"s, start);
+
+    cout << poss << endl;
+}
+
 int main() {
     part1();
+    part2();
     return 0;
 }
