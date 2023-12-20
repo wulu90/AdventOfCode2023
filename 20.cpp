@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <queue>
 #include <ranges>
 #include <set>
@@ -28,6 +29,7 @@ struct module {
     module(string&& str, vector<string>&& strvec, MType mt) :name{str}, conn_str{strvec}, mtype{mt} {}
 
     virtual void handle_msg(const msg& m, queue<msg>& msg_queue) = 0;
+    virtual ~module()                                            = default;
 };
 
 struct flip_flop : public module {
@@ -55,10 +57,6 @@ struct conjunct : public module {
         return all_of(rems.begin(), rems.end(), [](pair<string, pulses> rem) { return rem.second == pulses::high; });
     }
 
-    bool all_low() {
-        return all_of(rems.begin(), rems.end(), [](pair<string, pulses> rem) { return rem.second == pulses::low; });
-    }
-
     void add_input(const string& str) {
         rems.insert({str, pulses::low});
     }
@@ -69,7 +67,7 @@ struct conjunct : public module {
 
     void handle_msg(const msg& m, queue<msg>& msg_queue) override {
         auto send_pul = all_high() ? pulses::low : pulses::high;
-        for (auto s : conn_str) {
+        for (auto& s : conn_str) {
             msg_queue.push({name, s, send_pul});
         }
     }
@@ -79,13 +77,13 @@ struct broadcaster : public module {
     broadcaster(string&& str, vector<string>&& strvec) : module{move(str), move(strvec), MType::broadcaster} {}
 
     void handle_msg(const msg& m, queue<msg>& msg_queue) override {
-        for (auto s : conn_str) {
+        for (auto& s : conn_str) {
             msg_queue.push({name, s, pulses::low});
         }
     }
 };
 
-shared_ptr<module> parseline(const string& str) {
+unique_ptr<module> parseline(const string& str) {
     auto sv = str | views::split(" -> "sv);
     string_view name_sv{*sv.begin()};
 
@@ -100,51 +98,31 @@ shared_ptr<module> parseline(const string& str) {
         strvec.emplace_back(string_view{s});
     }
 
-    shared_ptr<module> m;
+    unique_ptr<module> m;
     if (name_sv[0] == '%') {
-        m = make_shared<flip_flop>(move(name), move(strvec));
+        m = make_unique<flip_flop>(move(name), move(strvec));
     } else if (name_sv[0] == '&') {
-        m = make_shared<conjunct>(move(name), move(strvec));
+        m = make_unique<conjunct>(move(name), move(strvec));
     } else {
-        m = make_shared<broadcaster>(move(name), move(strvec));
+        m = make_unique<broadcaster>(move(name), move(strvec));
     }
     return m;
 }
 
-bool original_states(const map<string, shared_ptr<module>>& modulemap) {
-    bool res = true;
-
-    for (auto [s, m] : modulemap) {
-        if (m->mtype == MType::flip_flop) {
-            if (dynamic_pointer_cast<flip_flop>(m)->is_on) {
-                res = false;
-                break;
-            }
-        }
-
-        if (m->mtype == MType::conjunct) {
-            if (!dynamic_pointer_cast<conjunct>(m)->all_low()) {
-                res = false;
-                break;
-            }
-        }
-    }
-
-    return res;
-}
-
 void part1() {
     ifstream input("input");
-    map<string, shared_ptr<module>> modulemap;
+    map<string, unique_ptr<module>> modulemap;
     for (string str; getline(input, str);) {
         auto m = parseline(str);
-        modulemap.insert({m->name, m});
+        modulemap.insert({m->name, move(m)});
     }
 
-    for (auto [str, m] : modulemap) {
-        for (auto s : m->conn_str) {
+    for (auto& [str, m] : modulemap) {
+        for (auto& s : m->conn_str) {
             if (modulemap.contains(s) && modulemap[s]->mtype == MType::conjunct) {
-                dynamic_pointer_cast<conjunct>(modulemap[s])->add_input(str);
+                dynamic_cast<conjunct&>(*modulemap[s]).add_input(str);
+
+                // dynamic_cast<conjunct*>(modulemap[s].get())->add_input(str);
             }
         }
     }
@@ -154,9 +132,8 @@ void part1() {
     int64_t highcount = 0;
     for (int i = 1; i <= 1000; ++i) {
         ++lowcount;    // button -> broadcaster;
-        for (auto& s : modulemap["broadcaster"s]->conn_str) {
-            msg_queue.push({"broadcaster"s, s, pulses::low});
-        }
+
+        dynamic_cast<broadcaster&>(*modulemap["broadcaster"s]).handle_msg({}, msg_queue);
 
         while (!msg_queue.empty()) {
             auto& m = msg_queue.front();
@@ -172,23 +149,12 @@ void part1() {
             }
 
             if (modulemap[m.receiver]->mtype == MType::conjunct) {
-                dynamic_pointer_cast<conjunct>(modulemap[m.receiver])->update_input(m.sender, m.pul);
+                dynamic_cast<conjunct&>(*modulemap[m.receiver]).update_input(m.sender, m.pul);
             }
 
             modulemap[m.receiver]->handle_msg(m, msg_queue);
 
             msg_queue.pop();
-        }
-
-        if (original_states(modulemap)) {
-            // auto times=1000/i;
-            highcount *= 1000 / i;
-            lowcount *= 1000 / i;
-            i = 1000 - i * (1000 / i);
-
-            if (i == 0) {
-                break;
-            }
         }
     }
 
@@ -197,23 +163,36 @@ void part1() {
 
 void part2() {
     ifstream input("input");
-    map<string, shared_ptr<module>> modulemap;
+    map<string, unique_ptr<module>> modulemap;
     for (string str; getline(input, str);) {
         auto m = parseline(str);
-        modulemap.insert({m->name, m});
+        modulemap.insert({m->name, move(m)});
     }
 
-    for (auto [str, m] : modulemap) {
-        for (auto s : m->conn_str) {
+    for (auto& [str, m] : modulemap) {
+        for (auto& s : m->conn_str) {
             if (modulemap.contains(s) && modulemap[s]->mtype == MType::conjunct) {
-                dynamic_pointer_cast<conjunct>(modulemap[s])->add_input(str);
+                dynamic_cast<conjunct&>(*modulemap[s]).add_input(str);
             }
         }
     }
 
-    queue<msg> msg_queue;
-    for (int i = 1; i <= 100000000; ++i) {
+    vector<string> rx_grandfathers;
 
+    for (auto& [str, m] : modulemap) {
+        if (count(m->conn_str.begin(), m->conn_str.end(), "rx"s) > 0) {
+            for (auto& [s, mm] : modulemap) {
+                if (count(mm->conn_str.begin(), mm->conn_str.end(), str) > 0) {
+                    rx_grandfathers.push_back(s);
+                }
+            }
+        }
+    }
+
+    vector<int64_t> gf_high(rx_grandfathers.size(), 0ll);
+
+    queue<msg> msg_queue;
+    for (size_t i = 1; i <= numeric_limits<size_t>::max(); ++i) {
         for (auto& s : modulemap["broadcaster"s]->conn_str) {
             msg_queue.push({"broadcaster"s, s, pulses::low});
         }
@@ -231,20 +210,33 @@ void part2() {
                     ++rxlow;
                 }
             }
+
+            auto it = rx_grandfathers.begin();
+            if ((it = find(rx_grandfathers.begin(), rx_grandfathers.end(), m.sender)) != rx_grandfathers.end() && m.pul == pulses::high) {
+                if (gf_high[it - rx_grandfathers.begin()] == 0) {
+                    gf_high[it - rx_grandfathers.begin()] = i;
+                }
+            }
+
             if (!modulemap.contains(m.receiver)) {
                 msg_queue.pop();
                 continue;
             }
 
             if (modulemap[m.receiver]->mtype == MType::conjunct) {
-                dynamic_pointer_cast<conjunct>(modulemap[m.receiver])->update_input(m.sender, m.pul);
+                dynamic_cast<conjunct&>(*modulemap[m.receiver]).update_input(m.sender, m.pul);
             }
 
             modulemap[m.receiver]->handle_msg(m, msg_queue);
 
             msg_queue.pop();
         }
-        cout<<i<<' '<<rxlow<<' '<<rxhigh<<'\n';
+
+        if (count(gf_high.begin(), gf_high.end(), 0ll) == 0) {
+            cout << accumulate(gf_high.begin(), gf_high.end(), 1LL, [](const int64_t a, const int64_t b) { return lcm(a, b); }) << endl;
+            break;
+        }
+
         if (rxlow == 1) {
             cout << i << endl;
             break;
