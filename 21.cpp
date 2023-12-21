@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <queue>
 #include <set>
 #include <string>
@@ -15,9 +17,6 @@ void part1() {
         gardenmap.push_back(str);
     }
 
-    set<pair<size_t, size_t>> visited;
-    queue<pair<size_t, size_t>> que;
-
     size_t sr, sc;    // S row,col
     for (sr = 0; sr < gardenmap.size(); ++sr) {
         sc = gardenmap[sr].find('S');
@@ -26,29 +25,26 @@ void part1() {
         }
     }
 
-    que.push({sr, sc});
-
+    set<pair<size_t, size_t>> visited;
+    visited.insert({sr, sc});
     vector<vector<int>> dirs{{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
     for (int step = 1; step <= 64; ++step) {
-        auto qsize = que.size();
-        for (size_t i = 0; i < qsize; ++i) {
-            auto [row, col] = que.front();
+        set<pair<size_t, size_t>> tmpset;
+        for (auto [row, col] : visited) {
             for (auto d : dirs) {
                 auto r = row + d[0];
                 auto c = col + d[1];
 
                 if (r < gardenmap.size() && c < gardenmap[0].size() && gardenmap[r][c] != '#' && !visited.contains({r, c})) {
-                    que.push({r, c});
-                    visited.insert({r, c});
+                    tmpset.insert({r, c});
                 }
             }
-            que.pop();
         }
-        visited.clear();
+        visited = move(tmpset);
     }
 
-    cout << que.size() << endl;
+    cout << visited.size() << endl;
 }
 
 int main() {
