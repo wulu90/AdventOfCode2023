@@ -1,8 +1,9 @@
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <queue>
 #include <ranges>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -47,8 +48,49 @@ bool interact_xy(const brick& b1, const brick& b2) {
     return !(b1.e1.x > b2.e2.x || b1.e2.x < b2.e1.x) && !(b1.e1.y > b2.e2.y || b1.e2.y < b2.e1.y);
 }
 
-void part1() {
-    ifstream input{"input"};
+int chainbreak(const map<int, vector<int>>& support, const map<int, vector<int>>& supportby, int binx) {
+    set<int> disintegrated;
+    queue<int> q;
+
+    for (auto i : support.at(binx)) {
+        if (supportby.at(i).size() == 1) {    // important
+            disintegrated.insert(i);
+            q.push(i);
+        }
+    }
+
+    while (!q.empty()) {
+        auto qsize = q.size();
+        for (size_t i = 0; i < qsize; ++i) {
+            auto inx = q.front();
+            if (!support.contains(inx)) {
+                q.pop();
+                continue;
+            }
+
+            for (auto j : support.at(inx)) {
+                bool allbreak = true;
+                for (auto k : supportby.at(j)) {
+                    if (!disintegrated.contains(k)) {
+                        allbreak = false;
+                        break;
+                    }
+                }
+                if (allbreak) {
+                    disintegrated.insert(j);
+                    q.push(j);
+                }
+            }
+
+            q.pop();
+        }
+    }
+
+    return disintegrated.size();
+}
+
+void solve() {
+    ifstream input{"input"s};
     vector<brick> brickvec;
     for (string str; getline(input, str);) {
         brickvec.emplace_back(str);
@@ -127,9 +169,11 @@ void part1() {
     }
 
     int count = 0;
+    set<int> candisintegrated;
     for (int binx = 0; binx < brickvec.size(); ++binx) {
         if (!support.contains(binx)) {
             ++count;
+            candisintegrated.insert(binx);
         } else {
             bool canbreak = true;
             for (auto i : support[binx]) {
@@ -140,14 +184,25 @@ void part1() {
             }
             if (canbreak) {
                 ++count;
+                candisintegrated.insert(binx);
             }
         }
     }
 
     cout << count << endl;
+
+    // part2
+    int chaincount = 0;
+    for (int binx = 0; binx < brickvec.size(); ++binx) {
+        if (!candisintegrated.contains(binx)) {
+            chaincount += chainbreak(support, supportby, binx);
+        }
+    }
+
+    cout << chaincount << endl;
 }
 
 int main() {
-    part1();
+    solve();
     return 0;
 }
