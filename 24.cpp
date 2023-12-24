@@ -11,12 +11,12 @@ static int64_t maxv = 400000000000000ll;
 static int64_t minv = 200000000000000ll;
 
 struct hailstone {
-    double x;
-    double y;
-    double z;
-    double vx;
-    double vy;
-    double vz;
+    int64_t x;
+    int64_t y;
+    int64_t z;
+    int64_t vx;
+    int64_t vy;
+    int64_t vz;
 
     // y=ax+b;
     double a;    // slope
@@ -47,55 +47,11 @@ struct hailstone {
     }
 };
 
-bool check_boundaries(const hailstone& h) {
-    bool top    = false;
-    bool left   = false;
-    bool bottom = false;
-    bool right  = false;
-
-    // chekctop y=400000000000000
-    auto x = (maxv - h.b) / h.a;
-    if (x > minv && x < maxv) {
-        top = true;
-    }
-
-    // check bottom;
-    x = (minv - h.b) / h.a;
-    if (x > minv && x < maxv) {
-        bottom = true;
-    }
-
-    // chekcleft;
-    auto y = h.a * minv + h.b;
-    if (y > minv && y < maxv)
-        left = true;
-
-    y = h.a * maxv + h.b;
-    if (y > minv && y < maxv)
-        right = true;
-
-    if (top || left || bottom || right) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
+// input data no coinindent line
 bool intersection_xy(const hailstone& h1, const hailstone& h2) {
-    bool res = false;
-
-    if (h1.a == h2.a) {        // parallel or coincident
-        if (h1.b != h2.b) {    // parallel
-            res = false;
-        } else {    // coincident input data no this situaltion
-            if (check_boundaries(h1)) {
-                res = true;
-            }
-        }
-
-    } else {
+    if (h1.a != h2.a) {
         auto px = (h2.b - h1.b) / (h1.a - h2.a);
-        auto py = h1.a * (h2.b - h1.b) / (h1.a - h2.a) + h1.b;
+        auto py = h1.a * px + h1.b;
         if (px > minv && px < maxv && py > minv && py < maxv) {
             auto xt1 = (px - h1.x) / h1.vx;
             auto yt1 = (py - h1.y) / h1.vy;
@@ -103,16 +59,11 @@ bool intersection_xy(const hailstone& h1, const hailstone& h2) {
             auto yt2 = (py - h2.y) / h2.vy;
 
             if (xt1 > 0 && yt1 > 0 && xt2 > 0 && yt2 > 0) {
-                res = true;
-            } else {
-                res = false;
+                return true;
             }
-
-        } else {
-            res = false;
         }
     }
-    return res;
+    return false;
 }
 
 void part1() {
