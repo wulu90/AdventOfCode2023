@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <queue>
 #include <set>
 #include <string>
@@ -59,13 +60,28 @@ void part1() {
     auto endinx   = (rownum - 1) * colnum + hikingmap.back().find('.');
 
     vector<bool> visited(rownum * colnum, false);
-    size_t maxstep = 0;
-
+    size_t maxstep    = 0;
+    visited[startinx] = true;
     backtracking(endinx, startinx, visited, 0, maxstep, rownum, colnum, hikingmap);
 
     cout << maxstep << endl;
 }
 
+void backtracking2(size_t endinx, size_t curr, vector<bool>& visited, const map<size_t, map<size_t, size_t>>& adjmap, size_t& maxstep,
+                   size_t step) {
+    if (curr == endinx) {
+        maxstep = max(maxstep, step);
+        return;
+    } else {
+        for (auto [next, num] : adjmap.at(curr)) {
+            if (!visited[next]) {
+                visited[next] = true;
+                backtracking2(endinx, next, visited, adjmap, maxstep, step + num);
+                visited[next] = false;
+            }
+        }
+    }
+}
 
 void part2() {
     ifstream input{"input"s};
@@ -80,39 +96,74 @@ void part2() {
     auto startinx = hikingmap.begin()->find('.');
     auto endinx   = (rownum - 1) * colnum + hikingmap.back().find('.');
 
-    vector<bool> visited(rownum * colnum, false);
-    
-    vector<size_t> stepvec(rownum*colnum,0);
+    set<size_t> nodeset;    // position can connect to more than 2 others , include start and end;
+    nodeset.insert(startinx);
+    nodeset.insert(endinx);
 
-    queue<size_t> q;
-    q.push(endinx);
-
-    while(!q.empty()){
-        auto qsize=q.size();
-
-        for(size_t i=0;i<qsize;++i){
-            auto curr=q.front();
-
-            if(curr==startinx){
-                break;
+    for (size_t i = 0; i < rownum; ++i) {
+        for (size_t j = 0; j < colnum; ++j) {
+            if (hikingmap[i][j] == '#') {
+                continue;
             }
-
-            for(auto& d:dirs){
-                auto r=curr/colnum+d[0];
-                auto c=curr%colnum+d[1];
-
-                if(r<rownum&&c<colnum&&hikingmap[r][c]!='#'){
-                    
+            int conn = 0;
+            for (auto& d : dirs) {
+                auto r = i + d[0];
+                auto c = j + d[1];
+                if (r < rownum && c < colnum && hikingmap[r][c] != '#') {
+                    ++conn;
                 }
             }
-
+            if (conn > 2) {
+                nodeset.insert(i * colnum + j);
+            }
         }
-
     }
 
+    map<size_t, map<size_t, size_t>> adjmap;
+    for (auto i : nodeset) {
+        for (auto& d : dirs) {
+            auto r = i / colnum + d[0];
+            auto c = i % colnum + d[1];
+
+            if (r < rownum && c < colnum && hikingmap[r][c] != '#') {
+                auto curr         = r * colnum + c;
+                auto prev         = i;
+                auto step         = 1;
+                bool findnextnode = false;
+                while (true) {
+                    for (auto& di : dirs) {
+                        auto ri = curr / colnum + di[0];
+                        auto ci = curr % colnum + di[1];
+                        if (ri < rownum && ci < colnum && hikingmap[ri][ci] != '#' && ri * colnum + ci != prev) {
+                            prev = curr;
+                            curr = ri * colnum + ci;
+                            ++step;
+                        }
+                        if (nodeset.contains(curr)) {
+                            findnextnode = true;
+                            break;
+                        }
+                    }
+                    if (findnextnode) {
+                        adjmap[i].insert({curr, step});
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    vector<bool> visited(rownum * colnum, false);
+    visited[startinx] = true;
+    size_t maxstep    = 0;
+
+    backtracking2(endinx, startinx, visited, adjmap, maxstep, 0);
+
+    cout << maxstep << endl;
 }
 
 int main() {
     part1();
+    part2();
     return 0;
 }
