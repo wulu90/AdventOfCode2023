@@ -25,5 +25,6 @@ add_executable(day20 20.cpp)
 add_executable(day21 21.cpp)
 add_executable(day22 22.cpp)
 add_executable(day23 23.cpp)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:10000000")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:10000000") # for 23 recursive too much stack overflow
 add_executable(day24 24.cpp)
+add_executable(day25 25.cpp)
