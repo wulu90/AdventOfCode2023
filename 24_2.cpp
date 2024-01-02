@@ -1,5 +1,6 @@
 #include <array>
 #include <boost/multiprecision/cpp_int.hpp>
+#include <charconv>
 #include <fstream>
 #include <iostream>
 #include <numeric>
@@ -95,13 +96,38 @@ array<array<int64_t, 3>, 3> cross(const array<int64_t, 3>& p) {
 }
 
 array<int64_t, 3> matvecmul(const array<array<int64_t, 3>, 3>& mat, const array<int64_t, 3>& b) {
-    array<int64_t, 3> c;
+    array<int64_t, 3> c{0ll, 0ll, 0ll}; // important 
     for (size_t i = 0; i < 3; ++i) {
         for (size_t j = 0; j < 3; ++j) {
             c[i] += mat[i][j] * b[j];
         }
     }
     return c;
+}
+
+void printmat(const array<array<int1024_t, 7>, 6>& mat) {
+    for (size_t i = 0; i < 6; ++i) {
+        for (size_t j = 0; j < 7; ++j) {
+            cout << mat[i][j] << ' ';
+        }
+        cout << '\n';
+    }
+}
+
+void printvec(const array<int64_t, 3>& vec) {
+    for (size_t i = 0; i < 3; ++i) {
+        cout << vec[i] << ' ';
+    }
+    cout << '\n';
+}
+
+void printmat33(const array<array<int64_t, 3>, 3>& mat) {
+    for (size_t i = 0; i < 3; ++i) {
+        for (size_t j = 0; j < 3; ++j) {
+            cout << mat[i][j] << ' ';
+        }
+        cout << '\n';
+    }
 }
 
 void gauss_elimination(array<array<int1024_t, 7>, 6>& mat) {
@@ -120,8 +146,7 @@ void gauss_elimination(array<array<int1024_t, 7>, 6>& mat) {
             if (mat[j][i] == 0) {
                 continue;
             }
-            auto l = lcm(mat[j][i], mat[i][i]);
-            // cout << mat[j][i] << ' ' << mat[i][i] << ' ' << l << '\n';
+            auto l  = lcm(mat[j][i], mat[i][i]);
             auto fi = l / mat[i][i];
             auto ff = l / mat[j][i];
             for (size_t k = i; k <= n; ++k) {
@@ -129,6 +154,8 @@ void gauss_elimination(array<array<int1024_t, 7>, 6>& mat) {
             }
         }
     }
+
+    // printmat(mat);
 
     for (size_t i = n - 1; i < n; --i) {
         mat[i][n] /= mat[i][i];
@@ -189,12 +216,7 @@ void part2() {
 
     gauss_elimination(coeffs);
 
-    for (size_t i = 0; i < 6; ++i) {
-        for (size_t j = 0; j < 7; ++j) {
-            cout << coeffs[i][j] << ' ';
-        }
-        cout << '\n';
-    }
+    // printmat(coeffs);
 
     cout << coeffs[0][6] + coeffs[1][6] + coeffs[2][6] << endl;
 }
